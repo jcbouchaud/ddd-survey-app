@@ -1,6 +1,6 @@
-# API de Questionnaires Templates - Architecture DDD
+# API de Templates - Architecture DDD
 
-Cette application permet de créer et gérer des questionnaires templates et leurs questions associées, en suivant les principes du Domain-Driven Design (DDD) avec une approche fonctionnelle.
+Cette application permet de créer et gérer des templates avec leurs sections associées, en suivant les principes du Domain-Driven Design (DDD) avec une approche fonctionnelle.
 
 ## Architecture
 
@@ -21,19 +21,11 @@ La couche application utilise des **fonctions pures** plutôt que des classes, c
 
 ## Fonctionnalités
 
-### Templates de Questionnaires
+### Templates
 
-- **POST** `/templates/` - Créer un nouveau template
-- **GET** `/templates/` - Récupérer tous les templates
-- **GET** `/templates/{template_id}` - Récupérer un template spécifique
-- **POST** `/templates/{template_id}/questions` - Associer des questions à un template
-
-### Questions
-
-- **POST** `/questions/` - Créer une nouvelle question
-- **GET** `/questions/` - Récupérer toutes les questions
-- **GET** `/questions/{question_id}` - Récupérer une question spécifique
-- **PUT** `/questions/{question_id}` - Mettre à jour une question
+- **POST** `/templates/create` - Créer un nouveau template
+- **POST** `/templates/{template_id}/publish` - Publier un template
+- **POST** `/templates/{template_id}/sections` - Ajouter une section à un template
 
 ## Modèles de Données
 
@@ -42,44 +34,32 @@ La couche application utilise des **fonctions pures** plutôt que des classes, c
 ```json
 {
   "id": "uuid",
-  "name": "string",
+  "title": "string",
   "description": "string",
-  "questions_ids": ["uuid"]
+  "status": "draft|published",
+  "sections": []
 }
 ```
 
-### Question
+### Section
 
 ```json
 {
   "id": "uuid",
   "title": "string",
-  "description": "string",
-  "weighting": [1, 2, 3]
+  "description": "string"
 }
 ```
 
 ## Structure des Services
 
-### Services Template (`app/application/services/template_functions.py`)
+### Services Template (`app/application/services/template_service.py`)
 
 ```python
 # Fonctions principales
-async def create_template(dto: CreateTemplateDTO, uow: UnitOfWork) -> TemplateResponseDTO
-async def get_template_by_id(template_id: UUID, uow: UnitOfWork) -> Optional[TemplateResponseDTO]
-async def get_all_templates(uow: UnitOfWork) -> List[TemplateResponseDTO]
-async def update_template(template_id: UUID, dto: UpdateTemplateDTO, uow: UnitOfWork) -> Optional[TemplateResponseDTO]
-async def add_questions_to_template(template_id: UUID, question_ids: List[UUID], uow: UnitOfWork) -> TemplateResponseDTO
-```
-
-### Services Question (`app/application/services/question_functions.py`)
-
-```python
-# Fonctions principales
-async def create_question(dto: CreateQuestionDTO, uow: UnitOfWork) -> QuestionResponseDTO
-async def get_question_by_id(question_id: UUID, uow: UnitOfWork) -> Optional[QuestionResponseDTO]
-async def get_all_questions(uow: UnitOfWork) -> List[QuestionResponseDTO]
-async def update_question(question_id: UUID, dto: UpdateQuestionDTO, uow: UnitOfWork) -> Optional[QuestionResponseDTO]
+async def create_template(uow: AbstractUnitOfWork, title: str, description: str | None = None) -> TemplateAggregate
+async def publish_template(uow: AbstractUnitOfWork, template_id: UUID) -> TemplateAggregate
+async def add_section(uow: AbstractUnitOfWork, template_id: UUID, data: CreateSectionDTO) -> TemplateAggregate
 ```
 
 ## Installation et Lancement
@@ -101,32 +81,53 @@ http://localhost:8000/docs
 
 ## Exemples d'Utilisation
 
-### Créer une question
-```bash
-curl -X POST "http://localhost:8000/questions/" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "Quelle est votre satisfaction ?",
-    "description": "Évaluez votre niveau de satisfaction",
-    "weighting": [1, 2, 3]
-  }'
-```
-
 ### Créer un template
 ```bash
-curl -X POST "http://localhost:8000/templates/" \
+curl -X POST "http://localhost:8000/templates/create" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "Satisfaction Client",
+    "title": "Template de Satisfaction",
     "description": "Questionnaire de satisfaction client"
   }'
 ```
 
-### Associer des questions à un template
+### Publier un template
 ```bash
-curl -X POST "http://localhost:8000/templates/{template_id}/questions" \
+curl -X POST "http://localhost:8000/templates/{template_id}/publish"
+```
+
+### Ajouter une section à un template
+```bash
+curl -X POST "http://localhost:8000/templates/{template_id}/sections" \
   -H "Content-Type: application/json" \
-  -d '["question_id_1", "question_id_2"]'
+  -d '{
+    "title": "Section 1",
+    "description": "Description de la section"
+  }'
+```
+
+## Structure du Projet
+
+```
+backend/
+├── app/
+│   ├── api/                    # Contrôleurs FastAPI
+│   │   ├── main.py            # Configuration FastAPI
+│   │   ├── template.py        # Routes des templates
+│   │   └── helpers.py         # Utilitaires API
+│   ├── application/           # Couche application
+│   │   ├── dtos/             # Data Transfer Objects
+│   │   └── services/         # Services applicatifs (fonctions)
+│   ├── domain/               # Couche domaine
+│   │   ├── aggregates/       # Agrégats
+│   │   ├── entities/         # Entités
+│   │   ├── repositories/     # Interfaces des repositories
+│   │   └── value_objects/    # Objets de valeur
+│   └── infrastructure/       # Couche infrastructure
+│       ├── dependencies.py   # Injection de dépendances
+│       └── persistence/      # Implémentations des repositories
+├── requirements.txt
+└── README.md
 ```
 
 ## Avantages de l'Approche Fonctionnelle
@@ -135,4 +136,27 @@ curl -X POST "http://localhost:8000/templates/{template_id}/questions" \
 2. **Testabilité** : Plus facile de tester des fonctions pures
 3. **Composition** : Les fonctions peuvent être facilement composées
 4. **Immutabilité** : Moins d'état mutable à gérer
-5. **Dépendances explicites** : L'UnitOfWork est passé explicitement en paramètre 
+5. **Dépendances explicites** : L'UnitOfWork est passé explicitement en paramètre
+
+## Technologies Utilisées
+
+- **FastAPI** : Framework web moderne et rapide
+- **Pydantic** : Validation de données
+- **SQLAlchemy** : ORM pour la persistance
+- **Alembic** : Migrations de base de données
+- **Pytest** : Tests unitaires et d'intégration
+- **Uvicorn** : Serveur ASGI
+
+## Tests
+
+Pour exécuter les tests :
+
+```bash
+pytest
+```
+
+Pour les tests avec couverture :
+
+```bash
+pytest --cov=app
+``` 
