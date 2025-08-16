@@ -1,3 +1,9 @@
+"""
+Template API endpoints using the command pattern.
+
+This demonstrates how to call services through commands instead of directly.
+"""
+
 import logging
 from uuid import UUID
 
@@ -13,7 +19,6 @@ from app.application.commands.template_commands import (
     EditQuestionCommand,
     PublishTemplateCommand,
 )
-from app.application.dtos.question import CreateQuestionDTO, UpdateQuestionDTO
 from app.application.dtos.section import CreateSectionDTO
 from app.application.dtos.template import CreateTemplateDTO
 from app.domain.repositories.unit_of_work import AbstractUnitOfWork
@@ -91,7 +96,7 @@ async def add_section_endpoint(
 async def add_question_endpoint(
     template_id: UUID,
     section_id: UUID,
-    question_data: CreateQuestionDTO,
+    question_data: dict,  # You might want to create a proper DTO for this
     uow: AbstractUnitOfWork = Depends(get_uow),
 ) -> Response:
     async with uow:
@@ -100,10 +105,10 @@ async def add_question_endpoint(
         command = AddQuestionCommand(
             template_id=template_id,
             section_id=section_id,
-            question_text=question_data.text,
-            question_type=question_data.type,
-            options=question_data.options,
-            required=question_data.required,
+            question_text=question_data["text"],
+            question_type=question_data["type"],
+            options=question_data.get("options"),
+            required=question_data.get("required", False),
         )
         template = await command_bus.execute(command)
 
@@ -119,7 +124,7 @@ async def edit_question_endpoint(
     template_id: UUID,
     section_id: UUID,
     question_id: UUID,
-    question_data: UpdateQuestionDTO,
+    question_data: dict,  # You might want to create a proper DTO for this
     uow: AbstractUnitOfWork = Depends(get_uow),
 ) -> Response:
     async with uow:
@@ -129,10 +134,10 @@ async def edit_question_endpoint(
             template_id=template_id,
             section_id=section_id,
             question_id=question_id,
-            question_text=question_data.text,
-            question_type=question_data.type,
-            options=question_data.options,
-            required=question_data.required,
+            question_text=question_data["text"],
+            question_type=question_data["type"],
+            options=question_data.get("options"),
+            required=question_data.get("required", False),
         )
         template = await command_bus.execute(command)
 

@@ -39,7 +39,7 @@ class TemplateAggregate(BaseModel):
 
     def add_question(self, section_id: UUID, data: QuestionEntity):
         self._can_edit()
-        section = next((s for s in self.sections if s.section_id == section_id), None)
+        section = next((s for s in self.sections if s.id == section_id), None)
         if not section:
             raise ValueError(f"Section {section_id} not found.")
         section.questions.append(data)
@@ -47,15 +47,16 @@ class TemplateAggregate(BaseModel):
 
     def edit_question(self, section_id: UUID, question_id: UUID, data: QuestionEntity):
         self._can_edit()
-        section = next((s for s in self.sections if s.section_id == section_id), None)
+        section = next((s for s in self.sections if s.id == section_id), None)
         if not section:
             raise ValueError(f"Section {section_id} not found.")
-        question = next(
-            (q for q in section.questions if q.question_id == question_id), None
-        )
+
+        question = next((q for q in section.questions if q.id == question_id), None)
         if not question:
             raise ValueError(f"Question {question_id} not found.")
-        question = data
+
+        index = section.questions.index(question)
+        section.questions[index] = data
         self.updated_at = datetime.utcnow()
 
     def _can_edit(self):
