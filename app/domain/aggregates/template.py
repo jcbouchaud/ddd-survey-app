@@ -15,8 +15,8 @@ class TemplateAggregate(BaseModel):
     description: str | None = None
     status: TemplateStatus = TemplateStatus.DRAFT
     sections: List[SectionEntity] = Field(default_factory=list)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
 
     def publish(self):
         """Domain rule: Only publish if at least one question exists."""
@@ -30,12 +30,12 @@ class TemplateAggregate(BaseModel):
             raise ValueError("Cannot publish an empty survey template.")
 
         self.status = TemplateStatus.PUBLISHED
-        self.updated_at = datetime.utcnow()
+        self.updated_at = datetime.now()
 
     def add_section(self, data: SectionEntity):
         self._can_edit()
         self.sections.append(data)
-        self.updated_at = datetime.utcnow()
+        self.updated_at = datetime.now()
 
     def add_question(self, section_id: UUID, data: QuestionEntity):
         self._can_edit()
@@ -43,7 +43,7 @@ class TemplateAggregate(BaseModel):
         if not section:
             raise ValueError(f"Section {section_id} not found.")
         section.questions.append(data)
-        self.updated_at = datetime.utcnow()
+        self.updated_at = datetime.now()
 
     def edit_question(self, section_id: UUID, question_id: UUID, data: QuestionEntity):
         self._can_edit()
@@ -57,7 +57,7 @@ class TemplateAggregate(BaseModel):
 
         index = section.questions.index(question)
         section.questions[index] = data
-        self.updated_at = datetime.utcnow()
+        self.updated_at = datetime.now()
 
     def _can_edit(self):
         if self.status == TemplateStatus.PUBLISHED:

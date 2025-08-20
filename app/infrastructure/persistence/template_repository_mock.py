@@ -30,7 +30,23 @@ class TemplateRepositoryMock(TemplateRepository):
         return self.data
 
     async def update(self, entity: TemplateAggregate) -> TemplateAggregate:
-        pass
+        for section in entity.sections:
+            if not section.id:
+                section.id = uuid4()
+            for question in section.questions:
+                if not question.id:
+                    question.id = uuid4()
+
+        template = await self.get_by_id(entity.id)
+        if not template:
+            raise TemplateNotFoundError(f"Template {entity.id} not found")
+        template.title = entity.title
+        template.description = entity.description
+        template.status = entity.status
+        template.sections = entity.sections
+        template.updated_at = entity.updated_at
+
+        return template
 
     async def delete(self, entity_id: UUID) -> bool:
         pass
